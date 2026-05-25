@@ -2,7 +2,7 @@ import SwiftUI
 import UserNotifications
 
 struct ContentView: View {
-    @State private var backendURL = "https://spark-monitor-xxx.onrender.com"
+    @State private var backendURL = "https://spark-batch-monitor.onrender.com"
     @State private var minMoney: Double = 8.0
     @State private var maxMiles: Double = 5.0
     @State private var maxItems: Double = 20.0
