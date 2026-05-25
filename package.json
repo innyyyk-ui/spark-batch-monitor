@@ -1,0 +1,25 @@
+{
+  "name": "spark-batch-monitor",
+  "version": "1.0.0",
+  "description": "Spark batch monitoring bot - humanlike auto-accept",
+  "main": "spark-monitor-v1.js",
+  "scripts": {
+    "start": "node spark-monitor-v1.js",
+    "dev": "node spark-monitor-v1.js"
+  },
+  "keywords": [
+    "spark",
+    "delivery",
+    "batch",
+    "monitor"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "puppeteer": "^21.0.0"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
