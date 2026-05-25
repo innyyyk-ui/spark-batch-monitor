@@ -4,6 +4,7 @@
   "description": "Spark batch monitoring bot - humanlike auto-accept",
   "main": "spark-monitor-v1.js",
   "scripts": {
+    "postinstall": "npx puppeteer browsers install chrome",
     "start": "node spark-monitor-v1.js",
     "dev": "node spark-monitor-v1.js"
   },
