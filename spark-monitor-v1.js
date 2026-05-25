@@ -1,25 +1,22 @@
 const express = require('express');
 const puppeteer = require('puppeteer');
+const fs = require('fs');
 const app = express();
 
 app.use(express.json());
 
 const STATE = {
     monitoring: false,
-    loggedIn: false,
     browser: null,
     page: null,
     filters: {
         minMoney: 8,
         maxMiles: 5,
-        maxItems: 20,
-        autoAccept: false
+        maxItems: 20
     },
     stats: {
         checked: 0,
-        found: 0,
-        accepted: 0,
-        rejected: 0
+        found: 0
     }
 };
 
@@ -38,19 +35,16 @@ app.post('/stop', (req, res) => {
 app.get('/status', (req, res) => {
     res.json({
         monitoring: STATE.monitoring,
-        loggedIn: STATE.loggedIn,
         filters: STATE.filters,
         stats: STATE.stats
     });
 });
 
 app.post('/config', (req, res) => {
-    if (req.body.minMoney !== undefined) STATE.filters.minMoney = req.body.minMoney;
-    if (req.body.maxMiles !== undefined) STATE.filters.maxMiles = req.body.maxMiles;
-    if (req.body.maxItems !== undefined) STATE.filters.maxItems = req.body.maxItems;
-    if (req.body.autoAccept !== undefined) STATE.filters.autoAccept = req.body.autoAccept;
-    
-    console.log('⚙️ Filters updated:', STATE.filters);
+    if (req.body.minMoney) STATE.filters.minMoney = req.body.minMoney;
+    if (req.body.maxMiles) STATE.filters.maxMiles = req.body.maxMiles;
+    if (req.body.maxItems) STATE.filters.maxItems = req.body.maxItems;
+    console.log('✅ Filters updated:', STATE.filters);
     res.json({ filters: STATE.filters });
 });
 
@@ -58,27 +52,39 @@ async function startMonitoring() {
     try {
         console.log('🚀 Starting Spark Monitor...');
         
+        // Check if cookies exist
+        if (!fs.existsSync('/app/cookies-spark.json')) {
+            console.log('❌ Cookies file not found!');
+            console.log('📝 HOW TO SAVE COOKIES:');
+            console.log('1. Go to https://www.spark.work in your browser');
+            console.log('2. Login with email, password, and 2FA');
+            console.log('3. Open DevTools (F12 or Cmd+Option+I)');
+            console.log('4. Go to Application → Cookies');
+            console.log('5. Right-click → Copy all as cURL');
+            console.log('6. Paste in /app/cookies-spark.json');
+            console.log('7. Restart monitoring');
+            STATE.monitoring = false;
+            return;
+        }
+        
+        console.log('✅ Loading cookies...');
+        const cookies = JSON.parse(fs.readFileSync('/app/cookies-spark.json', 'utf8'));
+        
         STATE.browser = await puppeteer.launch({
-            executablePath: '/usr/bin/google-chrome-stable',
             headless: 'new',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage'
-            ]
+            args: ['--no-sandbox']
         });
         
         STATE.page = await STATE.browser.newPage();
-        STATE.page.setDefaultTimeout(15000);
+        await STATE.page.setCookie(...cookies);
         
-        await STATE.page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
-        
-        console.log('✅ Spark Monitor ready - waiting for batches');
+        console.log('✅ Logged in with saved cookies');
+        console.log('📍 Monitoring Spark batches...');
         
         while (STATE.monitoring) {
             try {
-                await randomDelay(2000, 3000);
                 STATE.stats.checked++;
+                await randomDelay(3000, 5000);
             } catch (err) {
                 console.error('❌ Error:', err.message);
                 await randomDelay(5000, 8000);
@@ -86,27 +92,24 @@ async function startMonitoring() {
         }
         
         if (STATE.browser) await STATE.browser.close();
-        STATE.browser = null;
         
     } catch (err) {
-        console.error('❌ Monitoring error:', err.message);
+        console.error('❌ Error:', err.message);
         STATE.monitoring = false;
     }
 }
 
 function randomDelay(min, max) {
-    const delay = Math.random() * (max - min) + min;
-    return new Promise(resolve => setTimeout(resolve, delay));
+    return new Promise(r => setTimeout(r, Math.random() * (max - min) + min));
 }
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-    console.log(`🚀 Spark Monitor V1 running on port ${PORT}`);
-    console.log(`✅ Ready to monitor Spark batches`);
+    console.log(`🚀 Spark Monitor on port ${PORT}`);
+    console.log(`✅ Ready - waiting for cookies`);
 });
 
 process.on('SIGTERM', async () => {
-    console.log('Shutting down...');
     if (STATE.browser) await STATE.browser.close();
     process.exit(0);
 });
